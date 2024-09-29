@@ -12,11 +12,11 @@ local Lua = require('Module:Lua')
 local String = require('Module:StringUtils')
 
 local Achievements = Lua.import('Module:Infobox/Extension/Achievements')
-local Injector = Lua.import('Module:Infobox/Widget/Injector')
+local Injector = Lua.import('Module:Widget/Injector')
 local RaceBreakdown = Lua.import('Module:Infobox/Extension/RaceBreakdown')
 local Team = Lua.import('Module:Infobox/Team')
 
-local Widgets = require('Module:Infobox/Widget/All')
+local Widgets = require('Module:Widget/All')
 local Breakdown = Widgets.Breakdown
 local Cell = Widgets.Cell
 local Center = Widgets.Center
@@ -60,22 +60,13 @@ function CustomInjector:parse(id, widgets)
 			Array.appendWith(widgets,
 				Title{name = 'Player Breakdown'},
 				Cell{name = 'Number of Players', content = {raceBreakdown.total}},
-				Breakdown{content = raceBreakdown.display, classes = { 'infobox-center' }}
+				Breakdown{children = raceBreakdown.display, classes = { 'infobox-center' }}
 			)
 		end
 
 		return widgets
 	end
 	return widgets
-end
-
----@param lpdbData table
----@param args table
----@return table
-function CustomTeam:addToLpdb(lpdbData, args)
-	lpdbData.region = nil
-
-	return lpdbData
 end
 
 ---@param args table

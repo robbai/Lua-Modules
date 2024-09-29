@@ -14,6 +14,7 @@ return {
 	-- Usage: Other Match detail pop up icons
 	matchpopup = 'fas fa-info-circle',
 	timeout = 'far fa-clock',
+	veto = 'fas fa-times',
 
 	-- Usage: Rumors, Predictions, etc.
 	correct = 'fas fa-check',
@@ -58,14 +59,22 @@ return {
 	-- Usage: Reference links in tables (ie transfers)
 	reference = 'fad fa-external-link-alt',
 
-	-- Usage: Section links
+	-- Usage: Section links, navigation
 	activestage = 'fas fa-bell-exclamation',
 	prizepool = 'fas fa-sack-dollar',
 	teams = 'fas fa-users',
 	results = 'fas fa-th-list',
+	standings = 'fad fa-list-ol',
 	headlines = 'fas fa-newspaper',
 	achievements = 'fas fa-medal',
 	activeroster = 'fas fa-users',
 	history = 'fas fa-books',
 	media = 'fas fa-newspaper',
+
+	-- Usage: buildtime, duration, cooldown, ...
+	time = 'far fa-clock',
+
+	-- Usage: Sqaud Table
+	captain = 'fas fa-crown',
+	substitute = 'fas fa-people-arrows',
 }

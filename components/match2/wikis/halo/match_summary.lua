@@ -6,7 +6,8 @@
 -- Please see https://github.com/Liquipedia/Lua-Modules to contribute
 --
 
-local Json = require('Module:Json')
+local DateExt = require('Module:Date/Ext')
+local Icon = require('Module:Icon')
 local Logic = require('Module:Logic')
 local Lua = require('Module:Lua')
 local MapModes = require('Module:MapModes')
@@ -19,10 +20,7 @@ local MatchSummary = Lua.import('Module:MatchSummary/Base')
 local OpponentLibrary = require('Module:OpponentLibraries')
 local Opponent = OpponentLibrary.Opponent
 
-local EPOCH_TIME = '1970-01-01 00:00:00'
-local EPOCH_TIME_EXTENDED = '1970-01-01T00:00:00+00:00'
-
-local GREEN_CHECK = '<i class="fa fa-check forest-green-text" style="width: 14px; text-align: center" ></i>'
+local GREEN_CHECK = Icon.makeIcon{iconName = 'winner', color = 'forest-green-text', size = '110%'}
 local NO_CHECK = '[[File:NoCheck.png|link=]]'
 
 local LINK_DATA = {
@@ -52,7 +50,9 @@ function CustomMatchSummary.addToFooter(match, footer)
 
 	if
 		match.opponents[1].type == Opponent.team and
-		match.opponents[2].type == Opponent.team
+		match.opponents[2].type == Opponent.team and
+		match.opponents[1].name and
+		match.opponents[2].name
 	then
 		local team1, team2 = string.gsub(match.opponents[1].name, ' ', '_'), string.gsub(match.opponents[2].name, ' ', '_')
 		local buildQueryFormLink = function(form, template, arguments)
@@ -83,9 +83,9 @@ end
 function CustomMatchSummary.createBody(match)
 	local body = MatchSummary.Body()
 
-	if match.dateIsExact or (match.date ~= EPOCH_TIME_EXTENDED and match.date ~= EPOCH_TIME) then
+	if match.dateIsExact or match.timestamp ~= DateExt.defaultTimestamp then
 		-- dateIsExact means we have both date and time. Show countdown
-		-- if match is not epoch=0, we have a date, so display the date
+		-- if match is not default time, we have a date, so display the date
 		body:addRow(MatchSummary.Row():addElement(
 			DisplayHelper.MatchCountdownBlock(match)
 		))
@@ -99,15 +99,7 @@ function CustomMatchSummary.createBody(match)
 	end
 
 	-- casters
-	if String.isNotEmpty(match.extradata.casters) then
-		local casters = Json.parseIfString(match.extradata.casters)
-		local casterRow = MatchSummary.Casters()
-		for _, caster in pairs(casters) do
-			casterRow:addCaster(caster)
-		end
-
-		body:addRow(casterRow)
-	end
+	body:addRow(MatchSummary.makeCastersRow(match.extradata.casters))
 
 	-- Add Match MVP(s)
 	if match.extradata.mvp then
@@ -125,14 +117,6 @@ function CustomMatchSummary.createBody(match)
 	end
 
 	return body
-end
-
----@param game MatchGroupUtilGame
----@param opponentIndex integer
----@return Html
-function CustomMatchSummary._gameScore(game, opponentIndex)
-	local score = game.scores[opponentIndex] or ''
-	return mw.html.create('div'):wikitext(score)
 end
 
 ---@param game MatchGroupUtilGame
@@ -163,11 +147,11 @@ function CustomMatchSummary._createMapRow(game)
 	local leftNode = mw.html.create('div')
 		:addClass('brkts-popup-spaced')
 		:node(CustomMatchSummary._addCheckmark(game.winner == 1))
-		:node(CustomMatchSummary._gameScore(game, 1))
+		:node(DisplayHelper.MapScore(game.scores[1], 1, game.resultType, game.walkover, game.winner))
 
 	local rightNode = mw.html.create('div')
 		:addClass('brkts-popup-spaced')
-		:node(CustomMatchSummary._gameScore(game, 2))
+		:node(DisplayHelper.MapScore(game.scores[2], 2, game.resultType, game.walkover, game.winner))
 		:node(CustomMatchSummary._addCheckmark(game.winner == 2))
 
 	row:addElement(leftNode)

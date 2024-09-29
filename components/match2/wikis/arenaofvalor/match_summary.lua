@@ -9,10 +9,12 @@
 local CustomMatchSummary = {}
 
 local Array = require('Module:Array')
-local ChampionIcon = require('Module:HeroIcon')
+local CharacterIcon = require('Module:CharacterIcon')
 local Class = require('Module:Class')
+local DateExt = require('Module:Date/Ext')
 local DisplayHelper = require('Module:MatchGroup/Display/Helper')
 local ExternalLinks = require('Module:ExternalLinks')
+local Icon = require('Module:Icon')
 local Logic = require('Module:Logic')
 local Lua = require('Module:Lua')
 local String = require('Module:StringUtils')
@@ -23,11 +25,9 @@ local MatchSummary = Lua.import('Module:MatchSummary/Base')
 local MAX_NUM_BANS = 5
 local NUM_CHAMPIONS_PICK = 5
 
-local GREEN_CHECK = '[[File:GreenCheck.png|14x14px|link=]]'
+local GREEN_CHECK = Icon.makeIcon{iconName = 'winner', color = 'forest-green-text', size = '110%'}
 local NO_CHECK = '[[File:NoCheck.png|link=]]'
-
-local EPOCH_TIME = '1970-01-01 00:00:00'
-local EPOCH_TIME_EXTENDED = '1970-01-01T00:00:00+00:00'
+local NO_CHARACTER = 'default'
 
 -- Champion Ban Class
 ---@class AovChampionBan: MatchSummaryRowInterface
@@ -102,9 +102,9 @@ end
 function CustomMatchSummary.createBody(match)
 	local body = MatchSummary.Body()
 
-	if match.dateIsExact or (match.date ~= EPOCH_TIME_EXTENDED and match.date ~= EPOCH_TIME) then
+	if match.dateIsExact or match.timestamp ~= DateExt.defaultTimestamp then
 		-- dateIsExact means we have both date and time. Show countdown
-		-- if match is not epoch=0, we have a date, so display the date
+		-- if match is not default date, we have a date, so display the date
 		body:addRow(MatchSummary.Row():addElement(
 			DisplayHelper.MatchCountdownBlock(match)
 		))
@@ -135,7 +135,7 @@ function CustomMatchSummary.createBody(match)
 
 	-- Pre-Process Champion Ban Data
 	local championBanData = {}
-	for gameIndex, game in ipairs(match.games) do
+	for _, game in ipairs(match.games) do
 		local extradata = game.extradata or {}
 		local banData = {{}, {}}
 		local numberOfBans = 0
@@ -154,16 +154,20 @@ function CustomMatchSummary.createBody(match)
 			banData[1].color = extradata.team1side
 			banData[2].color = extradata.team2side
 			banData.numberOfBans = numberOfBans
-			championBanData[gameIndex] = banData
+			table.insert(championBanData, banData)
+		else
+			table.insert(championBanData, {})
 		end
 	end
 
 	-- Add the Champion Bans
-	if not Table.isEmpty(championBanData) then
+	if Array.any(championBanData, Table.isNotEmpty) then
 		local championBan = ChampionBan()
 
 		for gameIndex, banData in ipairs(championBanData) do
-			championBan:banRow(banData, gameIndex, banData.numberOfBans, match.date)
+			if Table.isNotEmpty(banData) then
+				championBan:banRow(banData, gameIndex, banData.numberOfBans, match.date)
+			end
 		end
 
 		body:addRow(championBan)
@@ -225,6 +229,7 @@ function CustomMatchSummary._createGame(game, gameIndex, date)
 		local comment = mw.html.create('div')
 		comment :wikitext(game.comment)
 				:css('margin', 'auto')
+				:css('width', '100%')
 		row:addElement(comment)
 	end
 
@@ -270,8 +275,8 @@ function CustomMatchSummary._opponentChampionsDisplay(opponentChampionsData, num
 		local champDisplay = mw.html.create('div')
 		:addClass('brkts-popup-side-color-' .. color)
 		:css('float', flip and 'right' or 'left')
-		:node(ChampionIcon._getImage{
-			champ = opponentChampionsData[index],
+		:node(CharacterIcon.Icon{
+			character = opponentChampionsData[index] or NO_CHARACTER,
 			class = 'brkts-champion-icon',
 			date = date,
 		})

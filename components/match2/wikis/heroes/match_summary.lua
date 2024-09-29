@@ -10,11 +10,12 @@ local CustomMatchSummary = {}
 
 local Abbreviation = require('Module:Abbreviation')
 local Array = require('Module:Array')
-local ChampionIcon = require('Module:HeroIcon')
+local CharacterIcon = require('Module:CharacterIcon')
 local Class = require('Module:Class')
+local DateExt = require('Module:Date/Ext')
 local DisplayHelper = require('Module:MatchGroup/Display/Helper')
 local ExternalLinks = require('Module:ExternalLinks')
-local Json = require('Module:Json')
+local Icon = require('Module:Icon')
 local Logic = require('Module:Logic')
 local Lua = require('Module:Lua')
 local String = require('Module:StringUtils')
@@ -25,8 +26,9 @@ local MatchSummary = Lua.import('Module:MatchSummary/Base')
 local MAX_NUM_BANS = 3
 local NUM_CHAMPIONS_PICK = 5
 
-local GREEN_CHECK  = '[[File:GreenCheck.png|14x14px|link=]]'
+local GREEN_CHECK = Icon.makeIcon{iconName = 'winner', color = 'forest-green-text', size = '110%'}
 local NO_CHECK = '[[File:NoCheck.png|link=]]'
+local NO_CHARACTER = 'default'
 local MAP_VETO_START = '<b>Start Map Veto</b>'
 local ARROW_LEFT = '[[File:Arrow sans left.svg|15x15px|link=|Left team starts]]'
 local ARROW_RIGHT = '[[File:Arrow sans right.svg|15x15px|link=|Right team starts]]'
@@ -40,19 +42,13 @@ local VETO_TYPE_TO_TEXT = {
 	defaultban = 'DEFAULT BAN',
 }
 
-local EPOCH_TIME = '1970-01-01 00:00:00'
-local EPOCH_TIME_EXTENDED = '1970-01-01T00:00:00+00:00'
-
 -- Champion Ban Class
 ---@class HeroesOfTheStormHeroBan: MatchSummaryRowInterface
 ---@operator call: HeroesOfTheStormHeroBan
----@field isBan boolean
 ---@field root Html
 ---@field table Html
 local ChampionBan = Class.new(
-	function(self, options)
-		options = options or {}
-		self.isBan = options.isBan
+	function(self)
 		self.root = mw.html.create('div'):addClass('brkts-popup-mapveto')
 		self.table = self.root:tag('table')
 			:addClass('wikitable-striped'):addClass('collapsible'):addClass('collapsed')
@@ -71,23 +67,25 @@ end
 
 ---@param banData {numberOfBans: integer, [1]: table, [2]: table}
 ---@param gameNumber integer
----@param numberOfBans integer
 ---@param date string
 ---@return HeroesOfTheStormHeroBan
-function ChampionBan:banRow(banData, gameNumber, numberOfBans, date)
+function ChampionBan:banRow(banData, gameNumber, date)
+	if Logic.isEmpty(banData) then
+		return self
+	end
 	self.table:tag('tr')
 		:tag('td')
-			:node(CustomMatchSummary._opponentChampionsDisplay(banData[1], numberOfBans, date, false, true))
+			:node(CustomMatchSummary._opponentChampionsDisplay(banData[1], banData.numberOfBans, date, false, true))
 		:tag('td')
 			:node(mw.html.create('div')
 				:wikitext(Abbreviation.make(
 							'Game ' .. gameNumber,
-							(self.isBan and 'Bans' or 'Picks') .. ' in game ' .. gameNumber
+							'Bans in game ' .. gameNumber
 						)
 					)
 				)
 		:tag('td')
-			:node(CustomMatchSummary._opponentChampionsDisplay(banData[2], numberOfBans, date, true, true))
+			:node(CustomMatchSummary._opponentChampionsDisplay(banData[2], banData.numberOfBans, date, true, true))
 	return self
 end
 
@@ -230,9 +228,9 @@ end
 function CustomMatchSummary.createBody(match)
 	local body = MatchSummary.Body()
 
-	if match.dateIsExact or (match.date ~= EPOCH_TIME_EXTENDED and match.date ~= EPOCH_TIME) then
+	if match.dateIsExact or match.timestamp ~= DateExt.defaultTimestamp then
 		-- dateIsExact means we have both date and time. Show countdown
-		-- if match is not epoch=0, we have a date, so display the date
+		-- if match is not default date, we have a date, so display the date
 		body:addRow(MatchSummary.Row():addElement(
 			DisplayHelper.MatchCountdownBlock(match)
 		))
@@ -262,15 +260,7 @@ function CustomMatchSummary.createBody(match)
 	end
 
 	-- casters
-	if String.isNotEmpty(match.extradata.casters) then
-		local casters = Json.parseIfString(match.extradata.casters)
-		local casterRow = MatchSummary.Casters()
-		for _, caster in pairs(casters) do
-			casterRow:addCaster(caster)
-		end
-
-		body:addRow(casterRow)
-	end
+	body:addRow(MatchSummary.makeCastersRow(match.extradata.casters))
 
 	-- Pre-Process Champion Ban Data
 	local championBanData = {}
@@ -299,11 +289,11 @@ function CustomMatchSummary.createBody(match)
 
 	-- Add the Champion Bans
 	if not Table.isEmpty(championBanData) then
-		local championBan = ChampionBan({isBan = true})
+		local championBan = ChampionBan()
 
-		for gameIndex, banData in ipairs(championBanData) do
-			championBan:banRow(banData, gameIndex, banData.numberOfBans, match.date)
-		end
+		Array.forEach(match.games,function (_, gameIndex)
+			championBan:banRow(championBanData[gameIndex], gameIndex, match.date)
+		end)
 
 		body:addRow(championBan)
 	end
@@ -313,8 +303,8 @@ function CustomMatchSummary.createBody(match)
 		local vetoData = match.extradata.mapveto
 		if vetoData then
 			local mapVeto = MapVeto()
-			if vetoData.vetostart then
-				mapVeto:vetoStart(tonumber(vetoData.vetostart), vetoData.format)
+			if vetoData[1] and vetoData[1].vetostart then
+				mapVeto:vetoStart(tonumber(vetoData[1].vetostart), vetoData[1].format)
 			end
 
 			for _,vetoRound in ipairs(vetoData) do
@@ -379,13 +369,18 @@ function CustomMatchSummary._createGame(game, gameIndex, date)
 	row:addElement(CustomMatchSummary._createCheckMark(game.winner == 2))
 	row:addElement(CustomMatchSummary._opponentChampionsDisplay(championsData[2], NUM_CHAMPIONS_PICK, date, true))
 
-	-- Add Comment
-	if not Logic.isEmpty(game.comment) then
-		row:addElement(MatchSummary.Break():create())
-		local comment = mw.html.create('div')
-		comment :wikitext(game.comment)
+	if Logic.isNotEmpty(game.comment) or Logic.isNotEmpty(game.length) then
+		game.length = Logic.nilIfEmpty(game.length)
+		local commentContents = Array.append({},
+			Logic.nilIfEmpty(game.comment),
+			game.length and tostring(mw.html.create('span'):wikitext('Match Duration: ' .. game.length)) or nil
+		)
+		row
+			:addElement(MatchSummary.Break():create())
+			:addElement(mw.html.create('div')
 				:css('margin', 'auto')
-		row:addElement(comment)
+				:wikitext(table.concat(commentContents, '<br>'))
+			)
 	end
 
 	return row
@@ -424,8 +419,8 @@ function CustomMatchSummary._opponentChampionsDisplay(opponentChampionsData, num
 		local champDisplay = mw.html.create('div')
 		:addClass('brkts-popup-side-color-' .. color)
 		:css('float', flip and 'right' or 'left')
-		:node(ChampionIcon._getImage{
-			champ = opponentChampionsData[index],
+		:node(CharacterIcon.Icon{
+			character = opponentChampionsData[index] or NO_CHARACTER,
 			class = 'brkts-champion-icon',
 			date = date,
 		})

@@ -8,7 +8,7 @@
 
 local Abbreviation = require('Module:Abbreviation')
 local Class = require('Module:Class')
-local Json = require('Module:Json')
+local Icon = require('Module:Icon')
 local Lua = require('Module:Lua')
 local String = require('Module:StringUtils')
 local Table = require('Module:Table')
@@ -18,7 +18,7 @@ local MatchSummary = Lua.import('Module:MatchSummary/Base')
 local OpponentLibrary = require('Module:OpponentLibraries')
 local OpponentDisplay = OpponentLibrary.OpponentDisplay
 
-local GREEN_CHECK = '[[File:GreenCheck.png|14x14px|link=]]'
+local GREEN_CHECK = Icon.makeIcon{iconName = 'winner', color = 'forest-green-text', size = '110%'}
 local NO_CHECK = '[[File:NoCheck.png|link=]]'
 local OVERTIME = '[[File:Cooldown_Clock.png|14x14px|link=]]'
 
@@ -196,15 +196,7 @@ function CustomMatchSummary.createBody(match)
 	end
 
 	-- casters
-	if String.isNotEmpty(match.extradata.casters) then
-		local casters = Json.parseIfString(match.extradata.casters)
-		local casterRow = MatchSummary.Casters()
-		for _, caster in pairs(casters) do
-			casterRow:addCaster(caster)
-		end
-
-		body:addRow(casterRow)
-	end
+	body:addRow(MatchSummary.makeCastersRow(match.extradata.casters))
 
 	return body
 end
@@ -276,7 +268,7 @@ function CustomMatchSummary._createGame(game)
 	return row
 end
 
----@param icon string
+---@param icon string?
 ---@param shouldDisplay boolean?
 ---@param additionalElement number|string|Html|nil
 ---@param side integer?

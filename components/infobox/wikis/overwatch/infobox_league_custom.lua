@@ -13,11 +13,12 @@ local Lua = require('Module:Lua')
 local PageLink = require('Module:Page')
 local String = require('Module:StringUtils')
 local Variables = require('Module:Variables')
+local Logic = require('Module:Logic')
 
-local Injector = Lua.import('Module:Infobox/Widget/Injector')
+local Injector = Lua.import('Module:Widget/Injector')
 local League = Lua.import('Module:Infobox/League')
 
-local Widgets = require('Module:Infobox/Widget/All')
+local Widgets = require('Module:Widget/All')
 local Cell = Widgets.Cell
 local Title = Widgets.Title
 local Center = Widgets.Center
@@ -29,6 +30,8 @@ local CustomInjector = Class.new(Injector)
 local BLIZZARD_TIERS = {
 	owl = 'Overwatch League',
 	owc = 'Overwatch Contenders',
+	owcs = 'Overwatch Champions Series',
+	owwc = 'Overwatch World Cup',
 }
 
 ---@param frame Frame
@@ -38,6 +41,11 @@ function CustomLeague.run(frame)
 	league:setWidgetInjector(CustomInjector(league))
 
 	return league:createInfobox()
+end
+
+---@param args table
+function CustomLeague:customParseArguments(args)
+	self.data.publishertier = self:_validPublisherTier(args.blizzardtier) and args.blizzardtier:lower()
 end
 
 ---@param id string
@@ -54,16 +62,13 @@ function CustomInjector:parse(id, widgets)
 	)
 	elseif id == 'customcontent' then
 		if String.isNotEmpty(args.map1) then
-			local game = String.isNotEmpty(args.game) and ('/' .. args.game) or ''
-			local maps = {}
-
-			for _, map in ipairs(League:getAllArgsForBase(args, 'map')) do
-				table.insert(maps, tostring(self.caller:_createNoWrappingSpan(
-					PageLink.makeInternalLink({}, map, map .. game)
-				)))
-			end
-			table.insert(widgets, Title{name = 'Maps'})
-			table.insert(widgets, Center{content = {table.concat(maps, '&nbsp;• ')}})
+			local maps = Array.map(self.caller:getAllArgsForBase(args, 'map'), function(map)
+				return PageLink.makeInternalLink(map)
+			end)
+			Array.appendWith(widgets,
+				Logic.isNotEmpty(maps) and table.insert(widgets, Title{name = 'Maps'}) or nil,
+				Center{content = table.concat(maps, '&nbsp;• ')}
+			)
 		end
 	elseif id == 'liquipediatier' then
 		if self.caller:_validPublisherTier(args.blizzardtier) then

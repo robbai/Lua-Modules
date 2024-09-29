@@ -10,6 +10,7 @@ return {
 	startYear = 2017,
 	wikiName = 'freefire',
 	name = 'Free Fire',
+	defaultGame = 'freefire',
 	games = {
 		freefire = {
 			abbreviation = 'Free Fire',
@@ -25,9 +26,15 @@ return {
 			},
 		},
 	},
-	defaultGame = 'freefire',
+	config = {
+		squads = {
+			hasPosition = false,
+			hasSpecialTeam = false,
+			allowManual = true,
+		},
+		match2 = {
+			status = 0,
+		},
+	},
 	defaultRoundPrecision = 0,
-	defaultTeamLogo = 'Freefire Default Logo.png', ---@deprecated
-	defaultTeamLogoDark = 'Freefire Default Logo.png', ---@deprecated
-	match2 = 0,
 }

@@ -7,17 +7,17 @@
 --
 
 local Array = require('Module:Array')
+local CharacterIcon = require('Module:CharacterIcon')
 local Class = require('Module:Class')
-local HeroIcon = require('Module:HeroIcon')
 local HeroNames = mw.loadData('Module:HeroNames')
 local Lua = require('Module:Lua')
 local Role = require('Module:Role')
 local Table = require('Module:Table')
 
-local Injector = Lua.import('Module:Infobox/Widget/Injector')
+local Injector = Lua.import('Module:Widget/Injector')
 local Player = Lua.import('Module:Infobox/Person')
 
-local Widgets = require('Module:Infobox/Widget/All')
+local Widgets = require('Module:Widget/All')
 local Cell = Widgets.Cell
 
 local SIZE_HERO = '25x25px'
@@ -55,9 +55,10 @@ function CustomInjector:parse(id, widgets)
 			local standardizedHero = HeroNames[hero:lower()]
 			if not standardizedHero then
 				-- we have an invalid hero entry add warning (including tracking category)
-				table.insert(caller.warnings, 'Invalid hero input "' .. hero .. '"[[Category:Pages with invalid hero input]]')
+				table.insert(caller.warnings,
+					'Invalid hero input "' .. hero .. '"[[Category:Pages with invalid hero input]]')
 			end
-			return HeroIcon.getImage{standardizedHero or hero, size = SIZE_HERO}
+			return CharacterIcon.Icon{character = standardizedHero or hero, size = SIZE_HERO}
 		end)
 
 		if Table.isEmpty(heroIcons) then return widgets end

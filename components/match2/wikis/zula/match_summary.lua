@@ -7,20 +7,19 @@
 --
 
 local Class = require('Module:Class')
+local DateExt = require('Module:Date/Ext')
+local Icon = require('Module:Icon')
 local Logic = require('Module:Logic')
 local Lua = require('Module:Lua')
 
 local DisplayHelper = Lua.import('Module:MatchGroup/Display/Helper')
 local MatchSummary = Lua.import('Module:MatchSummary/Base')
 
-local GREEN_CHECK = '[[File:GreenCheck.png|14x14px|link=]]'
+local GREEN_CHECK = Icon.makeIcon{iconName = 'winner', color = 'forest-green-text', size = '110%'}
 local NO_CHECK = '[[File:NoCheck.png|link=]]'
 
 local ARROW_LEFT = '[[File:Arrow sans left.svg|15x15px|link=|Left team starts]]'
 local ARROW_RIGHT = '[[File:Arrow sans right.svg|15x15px|link=|Right team starts]]'
-
-local EPOCH_TIME = '1970-01-01 00:00:00'
-local EPOCH_TIME_EXTENDED = '1970-01-01T00:00:00+00:00'
 
 local TBD = 'TBD'
 
@@ -209,7 +208,7 @@ function MapVeto:addColumnVetoType(row, styleClass, vetoText)
 end
 
 ---@param row Html
----@param map string
+---@param map string?
 ---@return ZulaMapVeto
 function MapVeto:addColumnVetoMap(row, map)
 	row:tag('td'):wikitext(map):done()
@@ -259,12 +258,12 @@ end
 function CustomMatchSummary.createBody(match)
 	local body = MatchSummary.Body()
 
-	if match.dateIsExact or (match.date ~= EPOCH_TIME_EXTENDED and match.date ~= EPOCH_TIME) then
+	if match.dateIsExact or match.timestamp ~= DateExt.defaultTimestamp then
 		if Logic.isNotEmpty(match.extradata.status) then
 			match.stream = {rawdatetime = true}
 		end
 		-- dateIsExact means we have both date and time. Show countdown
-		-- if match is not epoch=0, we have a date, so display the date
+		-- if match is not default date, we have a date, so display the date
 		body:addRow(MatchSummary.Row():addElement(
 			DisplayHelper.MatchCountdownBlock(match)
 		))
@@ -319,8 +318,8 @@ function CustomMatchSummary._createMap(game)
 	local team2Score = Score('rtl'):setRight()
 
 	-- Teams map score
-	team1Score:setMapScore(game.scores[1])
-	team2Score:setMapScore(game.scores[2])
+	team1Score:setMapScore(DisplayHelper.MapScore(game.scores[1], 1, game.resultType, game.walkover, game.winner))
+	team2Score:setMapScore(DisplayHelper.MapScore(game.scores[2], 2, game.resultType, game.walkover, game.winner))
 
 	local t1sides = extradata['t1sides'] or {}
 	local t2sides = extradata['t2sides'] or {}

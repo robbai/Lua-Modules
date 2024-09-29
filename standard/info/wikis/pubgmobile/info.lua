@@ -10,6 +10,7 @@ return {
 	startYear = 2018,
 	wikiName = 'pubgmobile',
 	name = 'PUBG Mobile',
+	defaultGame = 'pubgm',
 	games = {
 		pubgm = {
 			abbreviation = 'PUBGM',
@@ -64,9 +65,15 @@ return {
 			},
 		},
 	},
-	defaultGame = 'pubgm',
+	config = {
+		squads = {
+			hasPosition = false,
+			hasSpecialTeam = false,
+			allowManual = true,
+		},
+		match2 = {
+			status = 0,
+		},
+	},
 	defaultRoundPrecision = 0,
-	defaultTeamLogo = 'PUBG Mobile Default logo allmode.png', ---@deprecated
-	defaultTeamLogoDark = 'PUBG Mobile Default logo allmode.png', ---@deprecated
-	match2 = 0,
 }

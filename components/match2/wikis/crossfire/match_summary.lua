@@ -6,6 +6,8 @@
 -- Please see https://github.com/Liquipedia/Lua-Modules to contribute
 --
 
+local DateExt = require('Module:Date/Ext')
+local Icon = require('Module:Icon')
 local Logic = require('Module:Logic')
 local Lua = require('Module:Lua')
 local MapModes = require('Module:MapModes')
@@ -15,12 +17,9 @@ local Table = require('Module:Table')
 local DisplayHelper = Lua.import('Module:MatchGroup/Display/Helper')
 local MatchSummary = Lua.import('Module:MatchSummary/Base')
 
-local EPOCH_TIME = '1970-01-01 00:00:00'
-local EPOCH_TIME_EXTENDED = '1970-01-01T00:00:00+00:00'
-
 ---@enum CrossFireMatchIcons
-local Icon = {
-	CHECK = '<i class="fa fa-check forest-green-text" style="width: 14px; text-align: center" ></i>',
+local Icons = {
+	CHECK = Icon.makeIcon{iconName = 'winner', color = 'forest-green-text', size = '110%'},
 	EMPTY = '[[File:NoCheck.png|link=]]',
 }
 
@@ -50,7 +49,7 @@ end
 function CustomMatchSummary.createBody(match)
 	local body = MatchSummary.Body()
 
-	if match.dateIsExact or (match.date ~= EPOCH_TIME_EXTENDED and match.date ~= EPOCH_TIME) then
+	if match.dateIsExact or match.timestamp ~= DateExt.defaultTimestamp then
 		-- dateIsExact means we have both date and time. Show countdown
 		-- if match is not epoch=0, we have a date, so display the date
 		body:addRow(MatchSummary.Row():addElement(
@@ -80,15 +79,10 @@ function CustomMatchSummary.createBody(match)
 
 	end
 
-	return body
-end
+	-- casters
+	body:addRow(MatchSummary.makeCastersRow(match.extradata.casters))
 
----@param game MatchGroupUtilGame
----@param opponentIndex integer
----@return Html
-function CustomMatchSummary._gameScore(game, opponentIndex)
-	local score = game.scores[opponentIndex]
-	return mw.html.create('div'):wikitext(score)
+	return body
 end
 
 ---@param game MatchGroupUtilGame
@@ -118,13 +112,13 @@ function CustomMatchSummary._createMapRow(game)
 
 	local leftNode = mw.html.create('div')
 		:addClass('brkts-popup-spaced')
-		:node(CustomMatchSummary._createCheckMarkOrCross(game.winner == 1, Icon.CHECK))
-		:node(CustomMatchSummary._gameScore(game, 1))
+		:node(CustomMatchSummary._createCheckMarkOrCross(game.winner == 1, Icons.CHECK))
+		:node(DisplayHelper.MapScore(game.scores[1], 1, game.resultType, game.walkover, game.winner))
 
 	local rightNode = mw.html.create('div')
 		:addClass('brkts-popup-spaced')
-		:node(CustomMatchSummary._gameScore(game, 2))
-		:node(CustomMatchSummary._createCheckMarkOrCross(game.winner == 2, Icon.CHECK))
+		:node(DisplayHelper.MapScore(game.scores[2], 2, game.resultType, game.walkover, game.winner))
+		:node(CustomMatchSummary._createCheckMarkOrCross(game.winner == 2, Icons.CHECK))
 
 	row:addElement(leftNode)
 		:addElement(centerNode)
@@ -156,7 +150,7 @@ function CustomMatchSummary._getMapDisplay(game)
 end
 
 ---@param showIcon boolean?
----@param iconType CrossFireMatchIcons?
+---@param iconType string?
 ---@return Html
 function CustomMatchSummary._createCheckMarkOrCross(showIcon, iconType)
 	local container = mw.html.create('div')
@@ -165,7 +159,7 @@ function CustomMatchSummary._createCheckMarkOrCross(showIcon, iconType)
 	if showIcon then
 		return container:node(iconType)
 	end
-	return container:node(Icon.EMPTY)
+	return container:node(Icons.EMPTY)
 end
 
 return CustomMatchSummary

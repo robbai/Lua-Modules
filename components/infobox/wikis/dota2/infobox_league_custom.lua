@@ -15,10 +15,10 @@ local String = require('Module:StringUtils')
 local Variables = require('Module:Variables')
 local Template = require('Module:Template')
 
-local Injector = Lua.import('Module:Infobox/Widget/Injector')
+local Injector = Lua.import('Module:Widget/Injector')
 local League = Lua.import('Module:Infobox/League')
 
-local Widgets = require('Module:Infobox/Widget/All')
+local Widgets = require('Module:Widget/All')
 local Cell = Widgets.Cell
 
 ---@class Dota2LeagueInfobox: InfoboxLeague
@@ -54,7 +54,7 @@ function CustomInjector:parse(id, widgets)
 			Cell{name = 'Teams', content = {args.team_number}},
 			Cell{name = 'Players', content = {args.player_number}},
 			Cell{name = 'Dota TV Ticket', content = {args.dotatv}},
-			Cell{name = 'Pro Circuit Points', content = {points and mw.language.new('en'):formatNum(points)}}
+			Cell{name = 'Pro Circuit Points', content = {points and mw.getContentLanguage():formatNum(points)}}
 		)
 	elseif id == 'liquipediatier' and args.pctier and args.liquipediatiertype ~= 'Qualifier' then
 		local valveIcon = ''

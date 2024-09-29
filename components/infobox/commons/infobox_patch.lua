@@ -16,7 +16,7 @@ local Variables = require('Module:Variables')
 
 local BasicInfobox = Lua.import('Module:Infobox/Basic')
 
-local Widgets = require('Module:Infobox/Widget/All')
+local Widgets = require('Module:Widget/All')
 local Cell = Widgets.Cell
 local Header = Widgets.Header
 local Title = Widgets.Title
@@ -24,7 +24,7 @@ local Center = Widgets.Center
 local Chronology = Widgets.Chronology
 local Builder = Widgets.Builder
 local Customizable = Widgets.Customizable
-local Highlights = require('Module:Infobox/Widget/Highlights')
+local Highlights = Widgets.Highlights
 
 ---@class PatchInfobox: BasicInfobox
 local Patch = Class.new(BasicInfobox)
@@ -36,9 +36,8 @@ function Patch.run(frame)
 	return patch:createInfobox()
 end
 
----@return Html
+---@return string
 function Patch:createInfobox()
-	local infobox = self.infobox
 	local args = self.args
 
 	local widgets = {
@@ -85,11 +84,11 @@ function Patch:createInfobox()
 	}
 
 	if Namespace.isMain() and not Logic.readBool(Variables.varDefault('disable_LPDB_storage')) then
-		infobox:categories(self:getInformationType(args))
+		self:categories(self:getInformationType(args))
 		self:setLpdbData(args)
 	end
 
-	return infobox:widgetInjector(self:createWidgetInjector()):build(widgets)
+	return self:build(widgets)
 end
 
 --- Allows for overriding this functionality
@@ -104,20 +103,21 @@ end
 --- Allows for overriding this functionality
 ---@param args table
 function Patch:setLpdbData(args)
+	local informationType = self:getInformationType(args):lower()
 	local lpdbData = {
 		name = self.name,
-		type = self:getInformationType(args):lower(),
+		type = informationType,
 		image = args.image,
 		imagedark = args.imagedark,
 		date = args.release,
-		information = mw.getContentLanguage():formatDate('m-d', args.release),
+		information = args.version,
 		extradata = {
 			highlights = self:getAllArgsForBase(args, 'highlight')
 		},
 	}
 
 	lpdbData = self:addToLpdb(lpdbData, args)
-	mw.ext.LiquipediaDB.lpdb_datapoint('patch_' .. self.name, Json.stringifySubTables(lpdbData))
+	mw.ext.LiquipediaDB.lpdb_datapoint(informationType .. '_' .. self.name, Json.stringifySubTables(lpdbData))
 end
 
 --- Allows for overriding this functionality

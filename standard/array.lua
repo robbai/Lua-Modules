@@ -6,8 +6,9 @@
 -- Please see https://github.com/Liquipedia/Lua-Modules to contribute
 --
 
-local Table = require('Module:Table')
 local Logic = require('Module:Logic')
+local String = require('Module:StringUtils')
+local Table = require('Module:Table')
 
 --
 -- Array functions. Arrays are tables with numeric indexes that does not
@@ -523,11 +524,11 @@ function Array.reduce(array, operator, initialValue)
 end
 
 ---Computes the maximum element in an array according to a scoring function. Returns nil if the array is empty.
----@generic T
+---@generic T, V
 ---@param array T[]
----@param funct fun(item: T): number
----@param compare? fun(maxScore: number, score: number): boolean
----@return number?
+---@param funct fun(item: T): V
+---@param compare? fun(maxScore: V, score: V): boolean
+---@return V
 function Array.maxBy(array, funct, compare)
 	compare = compare or Array.lexicalCompareIfTable
 
@@ -543,19 +544,20 @@ function Array.maxBy(array, funct, compare)
 end
 
 ---Computes the maximum element in an array. Returns nil if the array is empty.
----@param array number[]
----@param compare? fun(maxScore: number, score: number): boolean
----@return number?
+---@generic T
+---@param array T[]
+---@param compare? fun(maxScore: T, score: T): boolean
+---@return T
 function Array.max(array, compare)
 	return Array.maxBy(array, function(x) return x end, compare)
 end
 
 ---Computes the minimum element in an array according to a scoring function. Returns nil if the array is empty.
----@generic T
+---@generic T, V
 ---@param array T[]
----@param funct fun(item: T): number
----@param compare fun(maxScore: number, score: number): boolean
----@return number?
+---@param funct fun(item: T): V
+---@param compare? fun(score: V, minScore: V): boolean
+---@return V?
 function Array.minBy(array, funct, compare)
 	compare = compare or Array.lexicalCompareIfTable
 
@@ -571,9 +573,10 @@ function Array.minBy(array, funct, compare)
 end
 
 ---Computes the minimum element in an array. Returns nil if the array is empty.
----@param array number[]
----@param compare fun(maxScore: number, score: number): boolean
----@return number?
+---@generic T
+---@param array T[]
+---@param compare? fun(score: T, minScore: T): boolean
+---@return T
 function Array.min(array, compare)
 	return Array.minBy(array, function(x) return x end, compare)
 end
@@ -621,6 +624,15 @@ function Array.unique(elements)
 		end
 	end
 	return uniqueElements
+end
+
+---@param inputString string?
+---@param sep string?
+---@return string[]
+function Array.parseCommaSeparatedString(inputString, sep)
+	if Logic.isEmpty(inputString) then return {} end
+	---@cast inputString -nil
+	return Array.map(mw.text.split(inputString, sep or ','), String.trim)
 end
 
 return Array

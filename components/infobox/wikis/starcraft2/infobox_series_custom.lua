@@ -20,10 +20,10 @@ local Table = require('Module:Table')
 local Tier = require('Module:Tier/Custom')
 local Variables = require('Module:Variables')
 
-local Injector = Lua.import('Module:Infobox/Widget/Injector')
+local Injector = Lua.import('Module:Widget/Injector')
 local Series = Lua.import('Module:Infobox/Series')
 
-local Widgets = require('Module:Infobox/Widget/All')
+local Widgets = require('Module:Widget/All')
 local Cell = Widgets.Cell
 
 local GAME_MOD = 'mod'
@@ -62,7 +62,7 @@ function CustomInjector:parse(id, widgets)
 	if id == 'totalprizepool' then
 		if Logic.readBoolOrNil(args.prizepooltot) == false then return {} end
 		return {
-			Cell{name = 'Total prize money', content = {self.caller:_displaySeriesPrizepools()}},
+			Cell{name = 'Cumulative Prize Pool', content = {self.caller:_displaySeriesPrizepools()}},
 		}
 	elseif id == 'custom' then
 		Array.appendWith(widgets,

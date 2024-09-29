@@ -19,16 +19,19 @@ local Placement = Lua.import('Module:PrizePool/Placement')
 local OpponentLibrary = require('Module:OpponentLibraries')
 local Opponent = OpponentLibrary.Opponent
 
-local TableCell = require('Module:Widget/Table/Cell')
-local TableRow = require('Module:Widget/Table/Row')
+local Widgets = require('Module:Widget/All')
+local TableRow = Widgets.TableRow
+local TableCell = Widgets.TableCell
 
---- @class PrizePool
---- @field options table
---- @field _lpdbInjector LpdbInjector?
+---@class PrizePool: BasePrizePool
+---@field options table
+---@field _lpdbInjector LpdbInjector?
+---@field placements PrizePoolPlacement[]
 local PrizePool = Class.new(BasePrizePool)
 
 local NON_BREAKING_SPACE = '&nbsp;'
 
+---@param args table
 function PrizePool:readPlacements(args)
 	local currentPlace = 0
 	self.placements = Array.mapIndexes(function(placementIndex)
@@ -47,9 +50,11 @@ function PrizePool:readPlacements(args)
 	self.placements = Import.run(self)
 end
 
+---@param placement PrizePoolPlacement
+---@return WidgetTableCell
 function PrizePool:placeOrAwardCell(placement)
 	local placeCell = TableCell{
-		content = {{placement:getMedal() or '', NON_BREAKING_SPACE, placement:_displayPlace()}},
+		content = {placement:getMedal() or '', NON_BREAKING_SPACE, placement:_displayPlace()},
 		css = {['font-weight'] = 'bolder'},
 		classes = {'prizepooltable-place'},
 	}
@@ -58,12 +63,17 @@ function PrizePool:placeOrAwardCell(placement)
 	return placeCell
 end
 
+---@param placement PrizePoolPlacement
+---@param row WidgetTableRow
 function PrizePool:applyCutAfter(placement, row)
 	if placement.placeStart > self.options.cutafter then
 		row:addClass('ppt-hide-on-collapse')
 	end
 end
 
+---@param placement PrizePoolPlacement?
+---@param nextPlacement PrizePoolPlacement
+---@param rows WidgetTableRow[]
 function PrizePool:applyToggleExpand(placement, nextPlacement, rows)
 	if placement ~= nil
 		and placement.placeStart <= self.options.cutafter
@@ -76,6 +86,9 @@ function PrizePool:applyToggleExpand(placement, nextPlacement, rows)
 	end
 end
 
+---@param placeStart number
+---@param placeEnd number
+---@return WidgetTableRow
 function PrizePool:_toggleExpand(placeStart, placeEnd)
 	local text = 'place ' .. placeStart .. ' to ' .. placeEnd
 	local expandButton = TableCell{content = {'<div>' .. text .. '&nbsp;<i class="fa fa-chevron-down"></i></div>'}}
@@ -87,6 +100,10 @@ function PrizePool:_toggleExpand(placeStart, placeEnd)
 end
 
 -- get the lpdbObjectName depending on opponenttype
+---@param lpdbEntry placement
+---@param prizePoolIndex integer|string
+---@param lpdbPrefix string?
+---@return string
 function PrizePool:_lpdbObjectName(lpdbEntry, prizePoolIndex, lpdbPrefix)
 	local objectName = 'ranking'
 	if String.isNotEmpty(lpdbPrefix) then

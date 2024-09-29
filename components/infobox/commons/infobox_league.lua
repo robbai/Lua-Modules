@@ -8,6 +8,7 @@
 
 local Array = require('Module:Array')
 local Class = require('Module:Class')
+local DateExt = require('Module:Date/Ext')
 local Game = require('Module:Game')
 local Json = require('Module:Json')
 local Logic = require('Module:Logic')
@@ -19,7 +20,6 @@ local Table = require('Module:Table')
 local Template = require('Module:Template')
 local Tier = require('Module:Tier/Custom')
 local Variables = require('Module:Variables')
-local WarningBox = require('Module:WarningBox')
 
 local BasicInfobox = Lua.import('Module:Infobox/Basic')
 local Flags = Lua.import('Module:Flags')
@@ -33,9 +33,8 @@ local TextSanitizer = Lua.import('Module:TextSanitizer')
 
 local INVALID_TIER_WARNING = '${tierString} is not a known Liquipedia ${tierMode}'
 local VENUE_DESCRIPTION = '<br><small><small>(${desc})</small></small>'
-local DEFAULT_DATE = '1970-01-01'
 
-local Widgets = require('Module:Infobox/Widget/All')
+local Widgets = require('Module:Widget/All')
 local Cell = Widgets.Cell
 local Header = Widgets.Header
 local Title = Widgets.Title
@@ -46,8 +45,6 @@ local Chronology = Widgets.Chronology
 
 ---@class InfoboxLeague: BasicInfobox
 local League = Class.new(BasicInfobox)
-
-League.warnings = {}
 
 ---@param frame Frame
 ---@return string
@@ -124,13 +121,13 @@ function League:createInfobox()
 						local value = tostring(args.type):lower()
 						if self:shouldStore(args) then
 							if value == 'offline' then
-								self.infobox:categories('Offline Tournaments')
+								self:categories('Offline Tournaments')
 							elseif value == 'online' then
-								self.infobox:categories('Online Tournaments')
+								self:categories('Online Tournaments')
 							elseif value:match('online') and value:match('offline') then
-								self.infobox:categories('Online/Offline Tournaments')
+								self:categories('Online/Offline Tournaments')
 							else
-								self.infobox:categories('Unknown Type Tournaments')
+								self:categories('Unknown Type Tournaments')
 							end
 						end
 
@@ -228,19 +225,16 @@ function League:createInfobox()
 
 	self.name = TextSanitizer.stripHTML(self.name)
 
-	self.infobox:bottom(self:createBottomContent())
-
-	local builtInfobox = self.infobox:build(widgets)
+	self:bottom(self:createBottomContent())
 
 	if self:shouldStore(args) then
-		self.infobox:categories(unpack(self:_getCategories(args)))
+		self:categories(unpack(self:_getCategories(args)))
 		self:_setLpdbData(args, self.links)
 		self:_setSeoTags(args)
 	end
 
 	return mw.html.create()
-		:node(builtInfobox)
-		:node(WarningBox.displayAll(League.warnings))
+		:node(self:build(widgets))
 		:node(Logic.readBool(args.autointro) and ('<br>' .. self:seoText(args)) or nil)
 end
 
@@ -288,7 +282,7 @@ function League:_parseArgs()
 
 	self.data = data
 
-	self:_parsePrizePool(args)
+	self.prizepoolDisplay, self.data.prizepoolUsd, self.data.localCurrency = self:_parsePrizePool(args, data.endDate)
 
 	data.icon, data.iconDark, self.iconDisplay = self:getIcons{
 		displayManualIcons = Logic.readBool(args.display_series_icon_from_manual_input),
@@ -304,29 +298,31 @@ function League:_parseArgs()
 end
 
 ---@param args table
-function League:_parsePrizePool(args)
+---@param endDate string?
+---@return number|string?, number?, string?
+function League:_parsePrizePool(args, endDate)
 	if String.isEmpty(args.prizepool) and String.isEmpty(args.prizepoolusd) then
 		return
 	end
 
 	--need to get the display here since it sets variables we want/need to get the clean values
 	--overwritable since sometimes display is supposed to look a bit different
-	local display = self:displayPrizePool(args)
-
-	self.prizepoolDisplay = display
-	self.data.prizepoolUsd = tonumber(Variables.varDefault('tournament_prizepoolusd')) or 0
-	self.data.localCurrency = Variables.varDefault('tournament_currency', args.localcurrency)
+	return self:displayPrizePool(args, endDate),
+		tonumber(Variables.varDefault('tournament_prizepoolusd')) or 0,
+		Variables.varDefault('tournament_currency', args.localcurrency)
 end
 
 ---@param args table
+---@param endDate string?
 ---@return number|string?
-function League:displayPrizePool(args)
+function League:displayPrizePool(args, endDate)
 	return InfoboxPrizePool.display{
 		prizepool = args.prizepool,
 		prizepoolusd = args.prizepoolusd,
 		currency = args.localcurrency,
 		rate = args.currency_rate,
-		date = Logic.emptyOr(args.currency_date, self.data.endDate),
+		date = Logic.emptyOr(args.currency_date, endDate),
+		setvariables = args.setvariables,
 		displayRoundPrecision = args.currencyDispPrecision,
 		varRoundPrecision = args.currencyVarPrecision
 	}
@@ -380,7 +376,8 @@ function League:addTierCategories(args)
 		table.insert(categories, 'Pages with invalid Tier')
 	end
 	if not isValidTierTuple and not tierTypeCategory and String.isNotEmpty(tierType) then
-		table.insert(self.warnings, String.interpolate(INVALID_TIER_WARNING, {tierString = tierType, tierMode = 'Tiertype'}))
+		table.insert(self.warnings,
+			String.interpolate(INVALID_TIER_WARNING, {tierString = tierType, tierMode = 'Tiertype'}))
 		table.insert(categories, 'Pages with invalid Tiertype')
 	end
 
@@ -496,7 +493,11 @@ function League:_setLpdbData(args, links)
 		icon = self.data.icon,
 		icondark = self.data.iconDark,
 		series = mw.ext.TeamLiquidIntegration.resolve_redirect(args.series or ''),
-		seriespage = mw.ext.TeamLiquidIntegration.resolve_redirect(args.series or ''):gsub(' ', '_'),
+		seriespage = Page.pageifyLink(args.series),
+		serieslist = {
+			Page.pageifyLink(args.series),
+			Page.pageifyLink(args.series2),
+		},
 		previous = self:_getPageNameFromChronology(args.previous),
 		previous2 = self:_getPageNameFromChronology(args.previous2),
 		next = self:_getPageNameFromChronology(args.next),
@@ -510,9 +511,9 @@ function League:_setLpdbData(args, links)
 			League:_getNamedTableofAllArgsForBase(args, 'organizer'),
 			mw.ext.TeamLiquidIntegration.resolve_redirect
 		),
-		startdate = self.data.startDate or self.data.endDate or DEFAULT_DATE,
-		enddate = self.data.endDate or DEFAULT_DATE,
-		sortdate = self.data.endDate or DEFAULT_DATE,
+		startdate = self.data.startDate or self.data.endDate or DateExt.defaultDate,
+		enddate = self.data.endDate or DateExt.defaultDate,
+		sortdate = self.data.endDate or DateExt.defaultDate,
 		location = mw.text.decode(Locale.formatLocation({city = args.city or args.location, country = args.country})),
 		location2 = mw.text.decode(Locale.formatLocation({city = args.city2 or args.location2, country = args.country2})),
 		venue = args.venue,
@@ -580,7 +581,7 @@ function League:_createLocation(args)
 		local nationality = Flags.getLocalisation(country)
 
 		if String.isEmpty(nationality) then
-			self.infobox:categories('Unrecognised Country')
+			self:categories('Unrecognised Country')
 
 		else
 			local location = args['city' .. index] or args['location' .. index]
@@ -591,7 +592,7 @@ function League:_createLocation(args)
 			end
 
 			if self:shouldStore(args) then
-				self.infobox:categories(nationality .. ' Tournaments')
+				self:categories(nationality .. ' Tournaments')
 			end
 			table.insert(display, Flags.Icon{flag = country, shouldLink = true} .. '&nbsp;' .. displayText .. '<br>')
 		end

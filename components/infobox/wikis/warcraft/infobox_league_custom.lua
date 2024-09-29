@@ -23,11 +23,11 @@ local Table = require('Module:Table')
 local Tier = require('Module:Tier/Custom')
 local Variables = require('Module:Variables')
 
-local Injector = Lua.import('Module:Infobox/Widget/Injector')
+local Injector = Lua.import('Module:Widget/Injector')
 local League = Lua.import('Module:Infobox/League')
 local RaceBreakdown = Lua.import('Module:Infobox/Extension/RaceBreakdown')
 
-local Widgets = require('Module:Infobox/Widget/All')
+local Widgets = require('Module:Widget/All')
 local Breakdown = Widgets.Breakdown
 local Cell = Widgets.Cell
 local Center = Widgets.Center
@@ -49,6 +49,9 @@ local GAME_DEFAULT_SWITCH_DATE = '2020-01-01'
 
 local MODES = {
 	team = {tier = 'Team', store = 'team', category = 'Team'},
+	['FFA'] = {tier = ' FFA', store = 'FFA', category = 'FFA'},
+	['4v4'] = {tier = ' 4v4', store = '4v4', category = '4v4'},
+	['3v3'] = {tier = ' 3v3', store = '3v3', category = '3v3'},
 	['2v2'] = {tier = ' 2v2', store = '2v2', category = '2v2'},
 	default = {store = '1v1', category = 'Individual'},
 }
@@ -155,7 +158,7 @@ end
 ---@param args table
 ---@return {link: string, displayname: string}[]
 function CustomLeague:_getMaps(prefix, args)
-	local maps = Table.map(self:getAllArgsForBase(args, 'map'), function(mapIndex, map)
+	local maps = Table.map(self:getAllArgsForBase(args, prefix), function(mapIndex, map)
 		local mapArray = mw.text.split(map, '|')
 
 		mapArray[1] = (MapsData[mapArray[1]:lower()] or {}).name or mapArray[1]
@@ -269,7 +272,7 @@ function CustomInjector:parse(id, widgets)
 		if playerNumber then
 			Array.appendWith(widgets,
 				Cell{name = 'Number of Players', content = {playerNumber}},
-				Breakdown{content = caller.data.raceBreakDown.display or {}, classes = { 'infobox-center' }}
+				Breakdown{children = caller.data.raceBreakDown.display or {}, classes = { 'infobox-center' }}
 			)
 		end
 
@@ -296,6 +299,7 @@ function CustomInjector:parse(id, widgets)
 		displayMaps('map', 'Maps', caller.data.maps)
 		displayMaps('2map', '2v2 Maps')
 		displayMaps('3map', '3v3 Maps')
+		displayMaps('4map', '4v4 Maps')
 	end
 	return widgets
 end
@@ -393,7 +397,7 @@ function CustomLeague:addToLpdb(lpdbData, args)
 	lpdbData.participantsnumber = participantsNumber
 	lpdbData.sortdate = self.data.startTime.startTime
 		and (self.data.startTime.startTime .. (self.data.startTime.timeZone or ''))
-		or self.data.firstMatch or  self.data.startDate
+		or self.data.firstMatch or self.data.startDate
 	lpdbData.mode = self:_getMode()
 	lpdbData.extradata.seriesnumber = self.data.number
 

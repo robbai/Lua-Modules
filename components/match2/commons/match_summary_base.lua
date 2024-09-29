@@ -9,6 +9,8 @@
 local Array = require('Module:Array')
 local Class = require('Module:Class')
 local Flags = require('Module:Flags')
+local FnUtil = require('Module:FnUtil')
+local Json = require('Module:Json')
 local Logic = require('Module:Logic')
 local Lua = require('Module:Lua')
 local Page = require('Module:Page')
@@ -257,9 +259,10 @@ function Body:addClass(cssClass)
 	return self
 end
 
----@param row MatchSummaryRowInterface
+---@param row MatchSummaryRowInterface?
 ---@return MatchSummaryBody
 function Body:addRow(row)
+	if not row then return self end
 	self.root:node(row:create())
 	return self
 end
@@ -336,13 +339,18 @@ function Footer:addLink(link, icon, iconDark, text)
 end
 
 ---@param linkData table<string, {icon: string, text: string, iconDark: string?}>
----@param links table<string, string>
+---@param links table<string, string|table>
 ---@return MatchSummaryFooter
 function Footer:addLinks(linkData, links)
 	for linkType, link in pairs(links) do
 		local currentLinkData = linkData[linkType]
 		if not currentLinkData then
 			mw.log('Unknown link: ' .. linkType)
+		elseif type(link) == 'table' then
+			Array.forEach(link, function(gameLink, gameIdx)
+				local newText = currentLinkData.text .. ' on Game ' .. gameIdx
+				self:addLink(gameLink, currentLinkData.icon, currentLinkData.iconDark, newText)
+			end)
 		else
 			self:addLink(link, currentLinkData.icon, currentLinkData.iconDark, currentLinkData.text)
 		end
@@ -466,6 +474,7 @@ function Match:create()
 end
 
 ---@class MatchSummary
+---@operator call(string?):MatchSummary
 ---@field Header MatchSummaryHeader
 ---@field Body MatchSummaryBody
 ---@field Comment MatchSummaryComment
@@ -513,7 +522,7 @@ function MatchSummary:header(header)
 	return self
 end
 
----@param match MatchSummaryMatch
+---@param match MatchSummaryMatch?
 ---@return MatchSummary
 function MatchSummary:addMatch(match)
 	if not match then return self end
@@ -536,7 +545,7 @@ end
 
 ---Default header function
 ---@param match table
----@param options {teamStyle: teamStyle?, width: string?, noScore:boolean?}?
+---@param options {teamStyle: teamStyle?, noScore:boolean?}?
 ---@return MatchSummaryHeader
 function MatchSummary.createDefaultHeader(match, options)
 	options = options or {}
@@ -634,7 +643,7 @@ end
 ---Default createMatch function for usage in Custom MatchSummary
 ---@param matchData table?
 ---@param CustomMatchSummary table
----@param options {teamStyle: teamStyle?, width: string?, noScore: boolean?}?
+---@param options {teamStyle: teamStyle?, noScore: boolean?}?
 ---@return MatchSummaryMatch?
 function MatchSummary.createMatch(matchData, CustomMatchSummary, options)
 	if not matchData then
@@ -663,7 +672,7 @@ end
 ---Default getByMatchId function for usage in Custom MatchSummary
 ---@param CustomMatchSummary table
 ---@param args table
----@param options {teamStyle: teamStyle?, width: string?, noScore:boolean?}?
+---@param options {teamStyle: teamStyle?, width: fun(MatchGroupUtilMatch):string?|string?, noScore:boolean?}?
 ---@return Html
 function MatchSummary.defaultGetByMatchId(CustomMatchSummary, args, options)
 	assert(type(CustomMatchSummary.createBody) == 'function', 'Function "createBody" missing in "Module:MatchSummary"')
@@ -673,7 +682,12 @@ function MatchSummary.defaultGetByMatchId(CustomMatchSummary, args, options)
 	local match, bracketResetMatch = MatchGroupUtil.fetchMatchForBracketDisplay(
 		args.bracketId, args.matchId)
 
-	local matchSummary = MatchSummary():init(options.width)
+	local width = options.width
+	if type(width) == 'function' then
+		width = width(match)
+	end
+
+	local matchSummary = MatchSummary():init(width)
 
 	--additional header for when martin adds the the css and buttons for switching between match and reset match
 	--if bracketResetMatch then
@@ -689,6 +703,18 @@ function MatchSummary.defaultGetByMatchId(CustomMatchSummary, args, options)
 	matchSummary:addMatch(createMatch(bracketResetMatch))
 
 	return matchSummary:create()
+end
+
+---Default getByMatchId function for usage in Custom MatchSummary
+---@param castersInput string?
+---@return MatchSummaryCasters?
+function MatchSummary.makeCastersRow(castersInput)
+	if String.isEmpty(castersInput) then return end
+	local casters = Json.parseIfString(castersInput)
+	if Logic.isEmpty(casters) then return end
+	local casterRow = Casters()
+	Array.forEach(casters, FnUtil.curry(casterRow.addCaster, casterRow))
+	return casterRow
 end
 
 return MatchSummary

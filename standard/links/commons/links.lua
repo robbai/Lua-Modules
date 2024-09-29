@@ -47,7 +47,11 @@ local PREFIXES = {
 	booyah = {'https://booyah.live/'},
 	bracket = {''},
 	cc = {'https://cc.163.com/'},
-	challengermode = {'https://www.challengermode.com/tournaments/'},
+	challengermode = {
+		'https://www.challengermode.com/tournaments/',
+		player = 'https://www.challengermode.com/users/',
+		team = 'https://www.challengermode.com/teams/'
+	},
 	challonge = {
 		'',
 		player = 'https://challonge.com/users/',
@@ -55,6 +59,7 @@ local PREFIXES = {
 	chzzk = {'https://chzzk.naver.com/live/'},
 	cntft = {'https://lol.qq.com/tft/#/masterDetail/'},
 	corestrike = {'https://corestrike.gg/lookup/'},
+	cfs = {'https://www.crossfirestars.com/'},
 	datdota = {
 		'https://www.datdota.com/leagues/',
 		player = 'https://www.datdota.com/players/',
@@ -69,6 +74,7 @@ local PREFIXES = {
 		team = 'https://www.dotabuff.com/esports/teams/'
 	},
 	douyin = {'https://live.douyin.com/'},
+	douyin_page = {'https://v.douyin.com/'},
 	douyu = {'https://www.douyu.com/'},
 	esea = {
 		'https://play.esea.net/events/',
@@ -98,6 +104,7 @@ local PREFIXES = {
 	['faceit-hub'] = {'https://www.faceit.com/en/hub/'},
 	['faceit-org'] = {'https://www.faceit.com/en/organizers/'},
 	fanclub = {''},
+	geoguessr = {'https://www.geoguessr.com/'},
 	gosugamers = {''},
 	gplus = {'http://plus.google.com/-plus'},
 	halodatahive = {
@@ -116,10 +123,15 @@ local PREFIXES = {
 	instagram = {'https://www.instagram.com/'},
 	kick = {'https://www.kick.com/'},
 	kuaishou = {'https://live.kuaishou.com/u/'},
-	letsplaylive = {
+	['letsplaylive-old'] = {
 		'https://old.letsplay.live/event/',
 		team = 'https://old.letsplay.live/team/',
 		player = 'https://old.letsplay.live/profile/',
+	},
+	letsplaylive = {
+		'https://gg.letsplay.live/tournament/',
+		team = 'https://gg.letsplay.live/view-team/',
+		player = 'https://gg.letsplay.live/profile/view-stats/',
 	},
 	linkedin = {'https://www.linkedin.com/in/'},
 	loco = {'https://loco.gg/streamers/'},
@@ -148,6 +160,7 @@ local PREFIXES = {
 		team = 'https://rgl.gg/Public/Team?t=',
 		player = 'https://rgl.gg/Public/PlayerProfile?p=',
 	},
+	rooter = {'https://rooter.gg/'},
 	royaleapi = {'https://royaleapi.com/player/'},
 	rules = {''},
 	shift = {'https://www.shiftrle.gg/events/'},
@@ -159,6 +172,7 @@ local PREFIXES = {
 	sk = {'https://sk-gaming.com/member/'},
 	smashboards = {'https://smashboards.com/'},
 	snapchat = {'https://www.snapchat.com/add/'},
+	soop = {'https://www.sooplive.com/'},
 	sostronk = {'https://www.sostronk.com/tournament/'},
 	['start-gg'] = {
 		'https://start.gg/',
@@ -166,7 +180,7 @@ local PREFIXES = {
 	},
 	steam = {'https://steamcommunity.com/id/'},
 	steamtv = {'https://steam.tv/'},
-	strikr = {'https://strikr.gg/pilot/'},
+	strikr = {'https://strikr.pro/pilot/'},
 	privsteam = {'https://steamcommunity.com/groups/'},
 	pubsteam = {'https://steamcommunity.com/groups/'},
 	spotify = {'https://open.spotify.com/'},
@@ -252,7 +266,7 @@ local ALIASES = {
 	['facebook-gaming'] = {'fbgg'},
 	home = {'website', 'web', 'site', 'url'},
 	huyatv = {'huya'},
-	letsplaylive = {'cybergamer'},
+	['letsplaylive-old'] = {'cybergamer'},
 	replay = {'replays'},
 	rules = {'rulebook'},
 	['start-gg'] = {'startgg', 'smashgg'},
@@ -266,6 +280,7 @@ local ICON_KEYS_TO_RENAME = {
 	['esea-d'] = 'esea-league',
 	['faceit-c'] = 'faceit',
 	['faceit-c2'] = 'faceit',
+	['faceit-l'] = 'faceit',
 	['faceit-hub'] = 'faceit',
 	['faceit-org'] = 'faceit',
 	matcherinolink = 'matcherino',
@@ -276,6 +291,7 @@ local ICON_KEYS_TO_RENAME = {
 	tlpdint = 'tlpd',
 	tlpdkr = 'tlpd-wol-korea',
 	tlpdsospa = 'tlpd-sospa',
+	douyin_page = 'douyin',
 }
 
 ---@param links {[string]: string}

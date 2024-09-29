@@ -9,32 +9,30 @@
 local Class = require('Module:Class')
 local Lua = require('Module:Lua')
 
-local Widget = Lua.import('Module:Infobox/Widget')
-local WidgetFactory = Lua.import('Module:Infobox/Widget/Factory')
+local Widget = Lua.import('Module:Widget')
 
 ---@class WidgetTableRowInput
----@field cells WidgetTableCell[]?
+---@field cells Widget[]?
 ---@field classes string[]?
----@field css {[string]: string|number|nil}[]?
+---@field css {[string]: string|number|nil}?
 
 ---@class WidgetTableRow:Widget
 ---@operator call(WidgetTableRowInput): WidgetTableRow
----@field cells WidgetTableCell[]
 ---@field classes string[]
----@field css {[string]: string|number|nil}[]
+---@field css {[string]: string|number|nil}
 local TableRow = Class.new(
 	Widget,
 	function(self, input)
-		self.cells = input.cells or {}
+		self.children = input.children or input.cells or {}
 		self.classes = input.classes or {}
 		self.css = input.css or {}
 	end
 )
 
----@param cell WidgetTableCell?
+---@param cell Widget?
 ---@return self
 function TableRow:addCell(cell)
-	table.insert(self.cells, cell)
+	table.insert(self.children, cell)
 	return self
 end
 
@@ -45,13 +43,22 @@ function TableRow:addClass(class)
 	return self
 end
 
----@return integer
-function TableRow:getCellCount()
-	return #self.cells
+---@param key string
+---@param value string|number|nil
+---@return self
+function TableRow:addCss(key, value)
+	self.css[key] = value
+	return self
 end
 
----@return {[1]: Html}
-function TableRow:make()
+---@return integer
+function TableRow:getCellCount()
+	return #self.children
+end
+
+---@param children string[]
+---@return string?
+function TableRow:make(children)
 	local row = mw.html.create('div'):addClass('csstable-widget-row')
 
 	for _, class in ipairs(self.classes) do
@@ -60,13 +67,11 @@ function TableRow:make()
 
 	row:css(self.css)
 
-	for _, cell in ipairs(self.cells) do
-		for _, node in ipairs(WidgetFactory.work(cell, self.injector)) do
-			row:node(node)
-		end
+	for _, cell in ipairs(children) do
+		row:node(cell)
 	end
 
-	return {row}
+	return tostring(row)
 end
 
 return TableRow

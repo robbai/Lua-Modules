@@ -6,20 +6,18 @@
 -- Please see https://github.com/Liquipedia/Lua-Modules to contribute
 --
 
+local DateExt = require('Module:Date/Ext')
 local DisplayHelper = require('Module:MatchGroup/Display/Helper')
+local Icon = require('Module:Icon')
 local Logic = require('Module:Logic')
 local Lua = require('Module:Lua')
 
 local MatchSummary = Lua.import('Module:MatchSummary/Base')
 
-local EPOCH_TIME = '1970-01-01 00:00:00'
-local EPOCH_TIME_EXTENDED = '1970-01-01T00:00:00+00:00'
-
 local htmlCreate = mw.html.create
 
-local GREEN_CHECK = '<i class="fa fa-check forest-green-text" style="width: 14px; text-align: center" ></i>'
 local ICONS = {
-	check = GREEN_CHECK,
+	check = Icon.makeIcon{iconName = 'winner', color = 'forest-green-text', size = '110%'},
 }
 local NO_CHECK = '[[File:NoCheck.png|link=]]'
 local LINK_DATA = {
@@ -45,9 +43,9 @@ end
 function CustomMatchSummary.createBody(match)
 	local body = MatchSummary.Body()
 
-	if match.dateIsExact or (match.date ~= EPOCH_TIME_EXTENDED and match.date ~= EPOCH_TIME) then
+	if match.dateIsExact or match.timestamp ~= DateExt.defaultTimestamp then
 		-- dateIsExact means we have both date and time. Show countdown
-		-- if match is not epoch=0, we have a date, so display the date
+		-- if match is not default date, we have a date, so display the date
 		body:addRow(MatchSummary.Row():addElement(
 			DisplayHelper.MatchCountdownBlock(match)
 		))
@@ -61,14 +59,6 @@ function CustomMatchSummary.createBody(match)
 	end
 
 	return body
-end
-
----@param game MatchGroupUtilGame
----@param opponentIndex integer
----@return Html
-function CustomMatchSummary._gameScore(game, opponentIndex)
-	local score = game.scores[opponentIndex] or ''
-	return htmlCreate('div'):wikitext(score)
 end
 
 ---@param game MatchGroupUtilGame
@@ -99,11 +89,11 @@ function CustomMatchSummary._createMapRow(game)
 	local leftNode = htmlCreate('div')
 		:addClass('brkts-popup-spaced')
 		:node(CustomMatchSummary._createCheckMarkOrCross(game.winner == 1, 'check'))
-		:node(CustomMatchSummary._gameScore(game, 1))
+		:node(DisplayHelper.MapScore(game.scores[1], 1, game.resultType, game.walkover, game.winner))
 
 	local rightNode = htmlCreate('div')
 		:addClass('brkts-popup-spaced')
-		:node(CustomMatchSummary._gameScore(game, 2))
+		:node(DisplayHelper.MapScore(game.scores[2], 2, game.resultType, game.walkover, game.winner))
 		:node(CustomMatchSummary._createCheckMarkOrCross(game.winner == 2, 'check'))
 
 	row:addElement(leftNode)

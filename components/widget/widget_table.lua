@@ -10,25 +10,23 @@ local Array = require('Module:Array')
 local Class = require('Module:Class')
 local Lua = require('Module:Lua')
 
-local Widget = Lua.import('Module:Infobox/Widget')
-local WidgetFactory = Lua.import('Module:Infobox/Widget/Factory')
+local Widget = Lua.import('Module:Widget')
 
 ---@class WidgetTableInput
 ---@field rows WidgetTableRow[]?
 ---@field classes string[]?
----@field css {[string]: string|number|nil}[]?
+---@field css {[string]: string|number|nil}?
 ---@field columns integer?
 
 ---@class WidgetTable:Widget
 ---@operator call(WidgetTableInput):WidgetTable
----@field rows WidgetTableRow[]
 ---@field classes string[]
----@field css {[string]: string|number|nil}[]
+---@field css {[string]: string|number|nil}
 ---@field columns integer?
 local Table = Class.new(
 	Widget,
 	function(self, input)
-		self.rows = input.rows or {}
+		self.children = input.children or input.rows or {}
 		self.classes = input.classes or {}
 		self.css = input.css or {}
 		self.columns = input.columns
@@ -38,7 +36,7 @@ local Table = Class.new(
 ---@param row WidgetTableRow?
 ---@return self
 function Table:addRow(row)
-	table.insert(self.rows, row)
+	table.insert(self.children, row)
 	return self
 end
 
@@ -49,8 +47,9 @@ function Table:addClass(class)
 	return self
 end
 
----@return {[1]: Html}
-function Table:make()
+---@param children string[]
+---@return string?
+function Table:make(children)
 	local displayTable = mw.html.create('div'):addClass('csstable-widget')
 	displayTable:css{
 		['grid-template-columns'] = 'repeat(' .. (self.columns or self:_getMaxCells()) .. ', auto)',
@@ -62,13 +61,11 @@ function Table:make()
 
 	displayTable:css(self.css)
 
-	for _, row in ipairs(self.rows) do
-		for _, node in ipairs(WidgetFactory.work(row, self.injector)) do
-			displayTable:node(node)
-		end
+	for _, row in ipairs(children) do
+		displayTable:node(row)
 	end
 
-	return {displayTable}
+	return tostring(displayTable)
 end
 
 ---@return integer?
@@ -76,7 +73,7 @@ function Table:_getMaxCells()
 	local getNumberCells = function(row)
 		return row:getCellCount()
 	end
-	return Array.reduce(Array.map(self.rows, getNumberCells), math.max)
+	return Array.reduce(Array.map(self.children, getNumberCells), math.max)
 end
 
 return Table

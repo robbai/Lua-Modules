@@ -8,15 +8,19 @@
 
 local CustomMatchSummary = {}
 
+local Array = require('Module:Array')
+local CharacterIcon = require('Module:CharacterIcon')
 local Class = require('Module:Class')
+local DateExt = require('Module:Date/Ext')
+local Icon = require('Module:Icon')
 local Logic = require('Module:Logic')
 local Lua = require('Module:Lua')
-local HeroIcon = require('Module:HeroIcon')
-local Table = require('Module:Table')
+local MatchLinks = mw.loadData('Module:MatchLinks')
 local String = require('Module:StringUtils')
-local Array = require('Module:Array')
+local Table = require('Module:Table')
 
 local DisplayHelper = Lua.import('Module:MatchGroup/Display/Helper')
+local MatchPage = Lua.import('Module:MatchPage')
 local MatchSummary = Lua.import('Module:MatchSummary/Base')
 local Opponent = Lua.import('Module:Opponent')
 
@@ -24,31 +28,9 @@ local MAX_NUM_BANS = 7
 local NUM_HEROES_PICK_TEAM = 5
 local NUM_HEROES_PICK_SOLO = 1
 local SIZE_HERO = '57x32px'
-local GREEN_CHECK = '[[File:GreenCheck.png|14x14px|link=]]'
+local GREEN_CHECK = Icon.makeIcon{iconName = 'winner', color = 'forest-green-text', size = '110%'}
 local NO_CHECK = '[[File:NoCheck.png|link=]]'
--- Normal links, from input/lpdb
-local LINK_DATA = {
-	vod = {icon = 'File:VOD Icon.png', text = 'Watch VOD'},
-	preview = {icon = 'File:Preview Icon32.png', text = 'Preview'},
-	lrthread = {icon = 'File:LiveReport32.png', text = 'Live Report Thread'},
-	recap = {icon = 'File:Reviews32.png', text = 'Recap'},
-	headtohead = {icon = 'File:Match Info Stats.png', text = 'Head-to-head statistics'},
-	faceit = {icon = 'File:FACEIT-icon.png', text = 'FACEIT match room'},
-}
--- Auto generated links from Publisher ID
-local AUTO_LINKS = {
-	{icon = 'File:DOTABUFF-icon.png', url = 'https://www.dotabuff.com/matches/', name = 'DOTABUFF'},
-	{icon = 'File:DatDota-icon.png', url = 'https://www.datdota.com/matches/', name = 'datDota'},
-	{
-		icon = 'File:STRATZ_icon_lightmode.svg',
-		iconDark = 'File:STRATZ_icon_darkmode.svg',
-		url = 'https://stratz.com/matches/',
-		name = 'STRATZ'
-	},
-}
-
-local EPOCH_TIME = '1970-01-01 00:00:00'
-local EPOCH_TIME_EXTENDED = '1970-01-01T00:00:00+00:00'
+local NO_CHARACTER = 'default'
 
 -- Hero Ban Class
 ---@class DotaHeroBan: MatchSummaryRowInterface
@@ -123,20 +105,7 @@ function CustomMatchSummary.addToFooter(match, footer)
 		'&Head_to_head_query%5Bopponent%5D=' .. team2 .. '&wpRunQuery=Run+query'
 	end
 
-	local publisherIds = {}
-	Array.forEach(match.games, function(game, gameIndex)
-		publisherIds[gameIndex] = Logic.emptyOr(game.extradata.publisherid)
-	end)
-
-	Array.forEach(AUTO_LINKS, function(siteData)
-		for index, publisherId in pairs(publisherIds) do
-			local link = siteData.url .. publisherId
-			local text = 'Game ' .. index .. ' on ' .. siteData.name
-			footer:addLink(link, siteData.icon, siteData.iconDark, text)
-		end
-	end)
-
-	return footer:addLinks(LINK_DATA, match.links)
+	return footer:addLinks(MatchLinks, match.links)
 end
 
 ---@param match MatchGroupUtilMatch
@@ -144,12 +113,21 @@ end
 function CustomMatchSummary.createBody(match)
 	local body = MatchSummary.Body()
 
-	if match.dateIsExact or (match.date ~= EPOCH_TIME_EXTENDED and match.date ~= EPOCH_TIME) then
+	if match.dateIsExact or match.timestamp ~= DateExt.defaultTimestamp then
 		-- dateIsExact means we have both date and time. Show countdown
-		-- if match is not epoch=0, we have a date, so display the date
+		-- if match is not default date, we have a date, so display the date
 		body:addRow(MatchSummary.Row():addElement(
 			DisplayHelper.MatchCountdownBlock(match)
 		))
+	end
+
+	if MatchPage.isEnabledFor(match) then
+		local matchId = match.extradata.originalmatchid or match.matchId
+		local matchPageElement = mw.html.create('center')
+		matchPageElement:wikitext('[[Match:ID_' .. matchId .. '|Match Page]]')
+						:css('display', 'block')
+						:css('margin', 'auto')
+		body:addRow(MatchSummary.Row():css('font-size', '85%'):addElement(matchPageElement):addClass('brkts-popup-mvp'))
 	end
 
 	-- Iterate each map
@@ -211,6 +189,8 @@ function CustomMatchSummary.createBody(match)
 
 		body:addRow(heroBan)
 	end
+
+	body:addRow(MatchSummary.makeCastersRow(match.extradata.casters))
 
 	return body
 end
@@ -304,8 +284,8 @@ function CustomMatchSummary._opponentHeroesDisplay(opponentHeroesData, numberOfH
 			:addClass('brkts-popup-side-color-' .. color)
 			:addClass('brkts-popup-side-hero')
 			:addClass('brkts-popup-side-hero-hover')
-			:node(HeroIcon._getImage{
-				hero = opponentHeroesData[index],
+			:node(CharacterIcon.Icon{
+				character = opponentHeroesData[index] or NO_CHARACTER,
 				size = SIZE_HERO,
 			})
 		if numberOfHeroes == NUM_HEROES_PICK_SOLO then
